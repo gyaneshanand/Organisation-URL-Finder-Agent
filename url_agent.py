@@ -46,10 +46,11 @@ SYSTEM_PROMPT = """
 You are a grant assistant that finds official foundation websites. Given an organization name, you must:
 
 SEARCH STRATEGY (try multiple approaches):
-1. First search: "[Foundation Name] official website" 
-2. If no clear result, try: "[Foundation Name] .org"
-3. If still unclear, try: "[Foundation Name] foundation grants"
-4. If needed, try variations of the name (e.g., with/without "The", abbreviations)
+1. Start with search: "[Foundation Name]"
+2. First search: "[Foundation Name] official website"
+3. If no clear result, try: "[Foundation Name] .org"
+4. If still unclear, try: "[Foundation Name] foundation grants"
+5. If needed, try variations of the name (e.g., with/without "The", abbreviations)
 
 ANALYSIS CRITERIA:
 - Look for URLs that end with .org, .com, or similar domains
@@ -82,8 +83,8 @@ agent_executor = AgentExecutor(
 def find_foundation_url(name: str) -> str:
     # Try multiple search strategies
     search_variations = [
-        f"I am looking for the homepage URL of the foundation: '{name}'. Please search for the official website and return only the URL.",
-        f"Find the official website URL for '{name}' foundation. Try multiple search terms if needed.",
+        f"I am looking for the homepage URL of the organization: '{name}'. Please search for the official website and return only the URL.",
+        f"Find the official website URL for '{name}' organization. Try multiple search terms if needed.",
         f"Search for '{name}' official site .org domain. Use the validate_url tool to verify any URLs you find."
     ]
     

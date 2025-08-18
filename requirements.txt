@@ -7,3 +7,10 @@ requests>=2.31.0
 duckduckgo-search>=8.0.0
 fastapi>=0.104.0
 uvicorn>=0.24.0
+
+# Additional search providers
+google-search-results>=2.4.2  # For SerpAPI
+tavily-python>=0.3.0          # For Tavily search
+
+# LangSmith for tracing and monitoring
+langsmith>=0.1.0

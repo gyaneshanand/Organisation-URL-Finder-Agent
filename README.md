@@ -1,16 +1,72 @@
 # Organisation-URL-Finder-Agent
 
-A FastAPI-based service that finds official URLs for foundations and grant-making organizations using AI-powered search.
+A modular AI-powered service that finds official URLs for foundations and grant-making organizations. Now supports multiple search providers including DuckDuckGo, SerpAPI, and Tavily.
 
-## Features
+## 🚀 Features
 
+- **Modular Search Providers**: Switch between DuckDuckGo, SerpAPI, and Tavily search engines
 - **RESTful API**: Expose foundation URL finding as HTTP endpoints
 - **Multiple Search Strategies**: Tries different search approaches for better results
 - **URL Validation**: Verifies URLs contain foundation/grant-related content
 - **Interactive Documentation**: Built-in Swagger UI and ReDoc
 - **Health Checks**: Monitor API status and configuration
+- **Configurable**: Easily switch providers and customize search behavior
 
-## API Endpoints
+## 🔧 Search Providers
+
+### Available Providers
+
+1. **DuckDuckGo** (Default - No API key required)
+   - Free and privacy-focused
+   - Good for general searches
+   - No rate limits
+
+2. **SerpAPI** (Requires API key)
+   - Uses Google search results
+   - High-quality results
+   - Better for official websites
+
+3. **Tavily** (Requires API key)
+   - AI-powered search
+   - Optimized for factual queries
+   - Good for finding official sources
+
+## 📊 **LangSmith Integration**
+
+Monitor and debug your AI agent with LangSmith:
+
+- **Automatic Tracing**: All agent interactions are logged
+- **Performance Monitoring**: Track response times and success rates
+- **Debugging**: See exactly what the agent is thinking
+- **Analytics**: Understand usage patterns
+
+### LangSmith Setup
+```bash
+# Add to your .env file:
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=your_langsmith_key
+LANGSMITH_PROJECT=your_project_name
+
+# Test configuration
+python langsmith_setup.py
+```
+
+### Provider Configuration
+
+```python
+from modular_url_agent import ModularURLAgent
+
+# Use default provider (auto-selects best available)
+agent = ModularURLAgent()
+
+# Use specific provider
+agent = ModularURLAgent(search_provider="duckduckgo")
+
+# Switch providers dynamically
+agent.switch_search_provider("tavily")
+```
+
+## 📋 API Endpoints
 
 ### Health Check
 ```
@@ -24,10 +80,10 @@ POST /find-foundation-url
 Content-Type: application/json
 
 {
-    "foundation_name": "The William and Flora Hewlett Foundation"
+    "foundation_name": "The William and Flora Hewlett Foundation",
+    "search_provider": "duckduckgo"  // Optional: specify provider
 }
 ```
-
 
 ### Response Format
 ```json
@@ -35,11 +91,12 @@ Content-Type: application/json
     "foundation_name": "The William and Flora Hewlett Foundation",
     "url": "https://www.hewlett.org",
     "success": true,
-    "message": "Foundation URL found successfully"
+    "message": "Foundation URL found successfully",
+    "search_provider": "DuckDuckGo"
 }
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
 ### 1. Environment Setup
 ```bash
@@ -47,9 +104,15 @@ Content-Type: application/json
 git clone <repository-url>
 cd Organisation-URL-Finder-Agent
 
-# Copy environment file and add your OpenAI API key
+# Copy environment file and add your API keys
 cp sample.env .env
-# Edit .env and add your OPENAI_API_KEY
+# Edit .env and add your API keys:
+# - OPENAI_API_KEY (required)
+# - SERPAPI_API_KEY (optional - for SerpAPI)  
+# - TAVILY_API_KEY (optional - for Tavily)
+# - LANGSMITH_TRACING=true (optional - for monitoring)
+# - LANGSMITH_API_KEY (optional - for LangSmith)
+# - LANGSMITH_PROJECT (optional - your LangSmith project)
 ```
 
 ### 2. Install Dependencies
@@ -57,7 +120,40 @@ cp sample.env .env
 pip install -r requirements.txt
 ```
 
-### 3. Start the API Server
+### 3. LangSmith Setup (Optional)
+For monitoring and debugging your AI agent:
+```bash
+# Test LangSmith configuration
+python langsmith_setup.py
+
+# Your traces will appear at: https://smith.langchain.com/
+```
+
+### 4. Basic Usage
+
+#### Command Line Usage
+```python
+from modular_url_agent import ModularURLAgent
+
+# Create agent with default provider
+agent = ModularURLAgent()
+
+# Find a foundation URL
+url = agent.find_foundation_url("The William Penn Foundation")
+print(f"Found URL: {url}")
+
+# Switch providers
+agent.switch_search_provider("tavily")
+url2 = agent.find_foundation_url("Ford Foundation")
+print(f"Tavily result: {url2}")
+```
+
+#### Run Demo
+```bash
+python demo.py
+```
+
+### 4. Start the API Server
 ```bash
 # Option 1: Use the startup script
 ./start_api.sh
@@ -78,6 +174,74 @@ python test_api.py
 curl -X POST "http://localhost:8000/find-foundation-url" \
      -H "Content-Type: application/json" \
      -d '{"foundation_name": "Ford Foundation"}'
+```
+
+## ⚙️ Configuration & Customization
+
+### Environment Variables
+```bash
+# Required
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Optional - Search Provider API Keys
+SERPAPI_API_KEY=your_serpapi_key_here
+TAVILY_API_KEY=your_tavily_key_here
+
+# Optional - Search Configuration
+DEFAULT_SEARCH_PROVIDER=duckduckgo
+MAX_SEARCH_RESULTS=15
+SEARCH_TIMEOUT=30
+```
+
+### Custom Configuration
+```python
+from config import SearchConfig
+from modular_url_agent import ModularURLAgent
+
+# Create custom configuration
+config = SearchConfig(
+    default_provider="tavily",
+    max_results=20,
+    provider_preference=["tavily", "serpapi", "duckduckgo"],
+    search_variations=[
+        "'{name}' foundation official website",
+        "'{name}' grants homepage",
+        "'{name}' .org domain"
+    ]
+)
+
+# Use custom config
+agent = ModularURLAgent(config=config)
+```
+
+### Provider Comparison
+
+| Provider | API Key Required | Rate Limits | Result Quality | Cost |
+|----------|------------------|-------------|----------------|------|
+| DuckDuckGo | No | None | Good | Free |
+| SerpAPI | Yes | Based on plan | Excellent | Paid |
+| Tavily | Yes | Based on plan | Very Good | Paid |
+
+## 📁 Project Structure
+
+```
+Organisation-URL-Finder-Agent/
+├── search_providers/          # Modular search provider system
+│   ├── __init__.py
+│   ├── base_provider.py       # Abstract base class
+│   ├── duckduckgo_provider.py # DuckDuckGo implementation
+│   ├── serpapi_provider.py    # SerpAPI implementation
+│   ├── tavily_provider.py     # Tavily implementation
+│   └── factory.py             # Provider factory
+├── config.py                  # Configuration management
+├── modular_url_agent.py       # New modular agent
+├── url_agent.py              # Original agent (legacy)
+├── main.py                   # FastAPI application
+├── demo.py                   # Usage examples
+├── test_api.py               # API tests
+├── requirements.txt          # Dependencies
+├── sample.env                # Environment template
+└── README.md                 # This file
 ```
 
 ## API Documentation
