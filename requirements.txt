@@ -4,6 +4,6 @@ langchain-core>=0.2.0
 langchain>=0.2.0
 python-dotenv>=1.0.0
 requests>=2.31.0
-duckduckgo-search>=8.0.0
+ddgs>=1.7.9
 fastapi>=0.104.0
 uvicorn>=0.24.0
