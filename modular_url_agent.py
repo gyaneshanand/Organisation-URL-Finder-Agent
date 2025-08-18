@@ -126,7 +126,6 @@ ANALYSIS CRITERIA:
 - Look for URLs that end with .org, .com, or similar domains
 - Prioritize results that clearly match the foundation name
 - Use the validate_url tool to check if URLs contain foundation/grant content
-- Try at least 2-3 different search variations before concluding
 
 OUTPUT: Return ONLY the most reliable URL you find, nothing else.
 

@@ -61,8 +61,8 @@ class SearchProviderFactory:
             BaseSearchProvider: The first available and properly configured provider
         """
         if preferred_order is None:
-            preferred_order = ['tavily', 'serpapi', 'duckduckgo']
-        
+            preferred_order = [ "duckduckgo", "tavily", "serpapi"]
+
         for provider_name in preferred_order:
             try:
                 provider = cls.create_provider(provider_name, **kwargs)

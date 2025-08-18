@@ -36,7 +36,7 @@ class SearchConfig:
     def __post_init__(self):
         """Initialize default values after instantiation."""
         if self.provider_preference is None:
-            self.provider_preference = ["tavily", "serpapi", "duckduckgo"]
+            self.provider_preference = ["duckduckgo", "tavily", "serpapi"]
         
         if self.search_variations is None:
             self.search_variations = [
