@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_community.tools.ddg_search import DuckDuckGoSearchRun
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.tools import tool
+from langchain_core.tools import Tool
 from langchain.agents import create_openai_tools_agent, AgentExecutor
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -15,9 +15,8 @@ load_dotenv()
 if not os.getenv("OPENAI_API_KEY"):
     raise ValueError("OPENAI_API_KEY environment variable is not set. Please add it to your .env file.")
 
-# Define a validator tool (checks page content for keywords)
-@tool
-def validate_url(url: str) -> str:
+# Define a validator function
+def url_validator(url: str) -> str:
     """Fetches the URL and returns text if 'grant' or 'foundation' is found."""
     try:
         import requests
@@ -36,10 +35,17 @@ def validate_url(url: str) -> str:
         print(f"Unexpected error validating URL {url}: {e}")
         return ""
 
+# Create tool using Tool class to avoid decorator issues
+validate_url_tool = Tool(
+    name="validate_url",
+    description="Fetches the URL and returns text if 'grant' or 'foundation' is found.",
+    func=url_validator
+)
+
 # Set up model and tools with enhanced search
 llm = ChatOpenAI(temperature=0.1, model="gpt-4")
 search_tool = DuckDuckGoSearchRun(max_results=15)  # Increase search results from default 4
-tools = [search_tool, validate_url]  # Add validator tool to the tools list
+tools = [search_tool, validate_url_tool]  # Add validator tool to the tools list
 
 # Custom prompt to guide the agent with multiple search strategies
 SYSTEM_PROMPT = """

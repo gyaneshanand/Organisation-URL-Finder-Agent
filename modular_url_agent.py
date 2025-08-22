@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.tools import tool
+from langchain_core.tools import Tool
 from langchain.agents import create_openai_tools_agent, AgentExecutor
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -49,9 +49,8 @@ def setup_langsmith():
 # Initialize LangSmith
 setup_langsmith()
 
-
-@tool
-def validate_url(url: str) -> str:
+# Define URL validator function
+def url_validator(url: str) -> str:
     """Fetches the URL and returns text if 'grant' or 'foundation' is found."""
     try:
         import requests
@@ -68,7 +67,12 @@ def validate_url(url: str) -> str:
         return ""
     except Exception as e:
         print(f"Unexpected error validating URL {url}: {e}")
-        return ""
+# Create URL validation tool
+validate_url_tool = Tool(
+    name="validate_url",
+    description="Fetches the URL and returns text if 'grant' or 'foundation' is found.",
+    func=url_validator
+)
 
 
 class ModularURLAgent:
@@ -105,7 +109,7 @@ class ModularURLAgent:
         
         # Set up tools
         self.search_tool = self.search_provider.get_search_tool()
-        self.tools = [self.search_tool, validate_url]
+        self.tools = [self.search_tool, validate_url_tool]
         
         # Set up agent
         self._setup_agent()
@@ -162,7 +166,7 @@ Focus on finding the main official website, not news articles or other pages abo
         )
         
         self.search_tool = self.search_provider.get_search_tool()
-        self.tools = [self.search_tool, validate_url]
+        self.tools = [self.search_tool, validate_url_tool]
         self._setup_agent()
         
         print(f"✅ Now using {self.search_provider.get_provider_name()}")
