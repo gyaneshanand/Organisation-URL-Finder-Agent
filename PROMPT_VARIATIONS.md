@@ -1,6 +1,6 @@
-# Prompt Variation System
+# Prompt Variation System with Foundation Data Integration
 
-The URL Agent now supports multiple prompt variations for experimentation and optimization.
+The URL Agent now supports multiple prompt variations for experimentation and optimization, with optional foundation data integration to enhance search accuracy.
 
 ## Quick Start
 
@@ -10,12 +10,57 @@ from modular_url_agent import ModularURLAgent
 # Create agent with specific prompt variation
 agent = ModularURLAgent(prompt_variation=2)
 
+# Create agent with foundation data for enhanced accuracy
+foundation_data = {
+    'foundation_name': 'Ford Foundation',
+    'ein': '13-1684331',
+    'foundation_contact': 'info@fordfoundation.org',
+    'foundation_address': '320 E 43rd St',
+    'foundation_city': 'New York, NY',
+    'foundation_website_text': 'fordfoundation.org'
+}
+
+agent = ModularURLAgent(
+    prompt_variation=4,  # Best for data integration
+    foundation_data=foundation_data
+)
+
 # Switch between variations on the fly
 agent.switch_prompt_variation(3)
 
-# Get current prompt info
-info = agent.get_current_prompt_info()
-print(info)
+# Update foundation data dynamically
+agent.update_foundation_data(new_foundation_data)
+```
+
+## Foundation Data Integration
+
+### Supported Data Fields
+- `foundation_name`: Foundation Name
+- `ein`: EIN Tax ID Number
+- `foundation_contact`: Foundation Contact Information
+- `foundation_address`: Foundation Address
+- `foundation_city`: Foundation City
+- `foundation_website_text`: Known Website Information
+
+### Smart Data Filtering
+- Only non-blank fields are included in prompts
+- Empty strings, whitespace-only, and None values are automatically filtered out
+- Improves prompt clarity and reduces token usage
+
+### Example with Database Data
+```python
+# Get data from your database
+foundation_data = {
+    'foundation_name': 'Robert Wood Johnson Foundation',
+    'ein': '22-2250909',
+    'foundation_contact': '',  # Empty - will be filtered out
+    'foundation_address': '50 College Rd E',
+    'foundation_city': 'Princeton, NJ',
+    'foundation_website_text': 'rwjf.org'
+}
+
+agent = ModularURLAgent(prompt_variation=4, foundation_data=foundation_data)
+url = agent.find_foundation_url("Robert Wood Johnson Foundation")
 ```
 
 ## Available Prompt Variations
@@ -23,18 +68,24 @@ print(info)
 1. **Variation 1** - Original working prompt (default)
    - Balanced approach with clear instructions
    - Proven to work well in most cases
+   - Foundation data integrated if provided
 
 2. **Variation 2** - Enhanced prompt
    - More specific methodology and validation steps
    - Better for complex foundation names
+   - Foundation data integrated if provided
 
 3. **Variation 3** - Concise prompt
    - Minimal but effective approach
    - Faster processing, good for bulk operations
+   - Foundation data integrated if provided
 
-4. **Variation 4** - Detailed systematic prompt
+4. **Variation 4** - Detailed systematic prompt ⭐ **RECOMMENDED FOR DATA**
    - Step-by-step reasoning approach
+   - **Enhanced database integration with verification phases**
    - Best for difficult-to-find foundations
+   - Geographic and contact verification when data available
+   - EIN cross-referencing capabilities
 
 ## Usage Examples
 

@@ -63,12 +63,24 @@ app = FastAPI(
 class FoundationRequest(BaseModel):
     foundation_name: str
     search_provider: Optional[str] = None
+    ein: Optional[str] = None
+    foundation_contact: Optional[str] = None
+    foundation_address: Optional[str] = None
+    foundation_city: Optional[str] = None
+    foundation_website_text: Optional[str] = None
+    prompt_variation: Optional[int] = None
     
     class Config:
         json_schema_extra = {
             "example": {
                 "foundation_name": "The William and Flora Hewlett Foundation",
-                "search_provider": "duckduckgo"
+                "search_provider": "duckduckgo",
+                "ein": "13-1684331",
+                "foundation_contact": "info@hewlett.org",
+                "foundation_address": "2121 Sand Hill Road",
+                "foundation_city": "Menlo Park, CA",
+                "foundation_website_text": "hewlett.org",
+                "prompt_variation": 1
             }
         }
 
@@ -78,6 +90,8 @@ class FoundationResponse(BaseModel):
     success: bool
     message: str
     search_provider: str
+    prompt_variation: Optional[int] = None
+    foundation_data_used: Optional[bool] = None
     
     class Config:
         json_schema_extra = {
@@ -86,7 +100,9 @@ class FoundationResponse(BaseModel):
                 "url": "https://www.hewlett.org",
                 "success": True,
                 "message": "Foundation URL found successfully",
-                "search_provider": "DuckDuckGo"
+                "search_provider": "DuckDuckGo",
+                "prompt_variation": 1,
+                "foundation_data_used": True
             }
         }
 
@@ -105,11 +121,23 @@ class ProvidersResponse(BaseModel):
 async def root():
     """Root endpoint with API information"""
     return {
-        "message": "Foundation URL Finder API (Modular)",
-        "version": "2.0.0",
+        "message": "Foundation URL Finder API (Modular) with Database Integration",
+        "version": "2.1.0",
         "current_provider": url_agent.get_current_provider() if url_agent else "Not initialized",
         "langsmith_enabled": os.getenv('LANGSMITH_TRACING', 'false').lower() == 'true',
         "langsmith_project": os.getenv('LANGSMITH_PROJECT') if os.getenv('LANGSMITH_TRACING', 'false').lower() == 'true' else None,
+        "features": {
+            "foundation_data_integration": True,
+            "prompt_variations": [1, 2, 3, 4],
+            "supported_data_fields": [
+                "foundation_name",
+                "ein", 
+                "foundation_contact",
+                "foundation_address", 
+                "foundation_city",
+                "foundation_website_text"
+            ]
+        },
         "endpoints": {
             "health": "/health",
             "providers": "/providers",
@@ -186,6 +214,12 @@ async def find_foundation_url_post(request: FoundationRequest):
     
     - **foundation_name**: The name of the foundation to search for
     - **search_provider**: Optional search provider to use for this request
+    - **ein**: Optional EIN tax ID number
+    - **foundation_contact**: Optional foundation contact information
+    - **foundation_address**: Optional foundation address
+    - **foundation_city**: Optional foundation city
+    - **foundation_website_text**: Optional known website information
+    - **prompt_variation**: Optional prompt variation to use (1-4, default: 1, recommended: 4 for database data)
     """
     if not url_agent:
         raise HTTPException(status_code=500, detail="URL agent not initialized")
@@ -194,21 +228,64 @@ async def find_foundation_url_post(request: FoundationRequest):
         if not request.foundation_name.strip():
             raise HTTPException(status_code=400, detail="Foundation name cannot be empty")
         
+        # Build foundation data dictionary from request
+        foundation_data = {}
+        foundation_data_provided = False
+        
+        if request.foundation_name:
+            foundation_data['foundation_name'] = request.foundation_name
+        if request.ein:
+            foundation_data['ein'] = request.ein
+            foundation_data_provided = True
+        if request.foundation_contact:
+            foundation_data['foundation_contact'] = request.foundation_contact
+            foundation_data_provided = True
+        if request.foundation_address:
+            foundation_data['foundation_address'] = request.foundation_address
+            foundation_data_provided = True
+        if request.foundation_city:
+            foundation_data['foundation_city'] = request.foundation_city
+            foundation_data_provided = True
+        if request.foundation_website_text:
+            foundation_data['foundation_website_text'] = request.foundation_website_text
+            foundation_data_provided = True
+        
+        # Determine prompt variation to use
+        prompt_variation = request.prompt_variation or (4 if foundation_data_provided else 1)
+        
+        # Create a new agent instance with the provided data
+        # Save original agent state
+        original_provider = url_agent.get_current_provider()
+        original_variation = url_agent.prompt_variation
+        
         # Switch provider temporarily if requested
-        original_provider = None
         if request.search_provider:
-            original_provider = url_agent.get_current_provider()
             url_agent.switch_search_provider(request.search_provider)
         
+        # Update agent with foundation data and prompt variation
+        if foundation_data_provided:
+            url_agent.update_foundation_data(foundation_data)
+        
+        if prompt_variation != original_variation:
+            url_agent.switch_prompt_variation(prompt_variation)
+        
         logger.info(f"Searching for URL for foundation: {request.foundation_name}")
+        if foundation_data_provided:
+            logger.info(f"Using foundation data with prompt variation {prompt_variation}")
         
         # Use the modular URL finding function
         url = url_agent.find_foundation_url(request.foundation_name)
         current_provider = url_agent.get_current_provider()
         
-        # Switch back to original provider if we changed it
-        if original_provider and original_provider != current_provider:
+        # Restore original agent state
+        if request.search_provider and original_provider != current_provider:
             url_agent.switch_search_provider(original_provider)
+        
+        if prompt_variation != original_variation:
+            url_agent.switch_prompt_variation(original_variation)
+        
+        if foundation_data_provided:
+            url_agent.update_foundation_data(None)  # Clear foundation data
         
         # Check if URL was found successfully
         if url and url.startswith("http") and not url.startswith("Unable"):
@@ -217,7 +294,9 @@ async def find_foundation_url_post(request: FoundationRequest):
                 url=url,
                 success=True,
                 message="Foundation URL found successfully",
-                search_provider=current_provider
+                search_provider=current_provider,
+                prompt_variation=prompt_variation,
+                foundation_data_used=foundation_data_provided
             )
         else:
             return FoundationResponse(
@@ -225,7 +304,9 @@ async def find_foundation_url_post(request: FoundationRequest):
                 url=None,
                 success=False,
                 message=url if url.startswith("Unable") else "Unable to find foundation URL",
-                search_provider=current_provider
+                search_provider=current_provider,
+                prompt_variation=prompt_variation,
+                foundation_data_used=foundation_data_provided
             )
             
     except Exception as e:
@@ -236,14 +317,38 @@ async def find_foundation_url_post(request: FoundationRequest):
         )
 
 @app.get("/find-foundation-url/{foundation_name}", response_model=FoundationResponse)
-async def find_foundation_url_get(foundation_name: str, search_provider: Optional[str] = None):
+async def find_foundation_url_get(
+    foundation_name: str, 
+    search_provider: Optional[str] = None,
+    ein: Optional[str] = None,
+    foundation_contact: Optional[str] = None,
+    foundation_address: Optional[str] = None,
+    foundation_city: Optional[str] = None,
+    foundation_website_text: Optional[str] = None,
+    prompt_variation: Optional[int] = None
+):
     """
     Find the official URL for a foundation using GET request
     
     - **foundation_name**: The name of the foundation to search for
     - **search_provider**: Optional search provider to use for this request
+    - **ein**: Optional EIN tax ID number
+    - **foundation_contact**: Optional foundation contact information
+    - **foundation_address**: Optional foundation address
+    - **foundation_city**: Optional foundation city
+    - **foundation_website_text**: Optional known website information
+    - **prompt_variation**: Optional prompt variation to use (1-4)
     """
-    request = FoundationRequest(foundation_name=foundation_name, search_provider=search_provider)
+    request = FoundationRequest(
+        foundation_name=foundation_name, 
+        search_provider=search_provider,
+        ein=ein,
+        foundation_contact=foundation_contact,
+        foundation_address=foundation_address,
+        foundation_city=foundation_city,
+        foundation_website_text=foundation_website_text,
+        prompt_variation=prompt_variation
+    )
     return await find_foundation_url_post(request)
 
 # Error handlers

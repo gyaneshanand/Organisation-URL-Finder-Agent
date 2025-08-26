@@ -6,22 +6,29 @@ class PromptProvider:
     """Manages different system prompt variations for the URL agent."""
     
     @staticmethod
-    def get_prompt(variation: int = 1, search_provider_name: str = "search provider") -> str:
+    def get_prompt(variation: int = 1, search_provider_name: str = "search provider", foundation_data: dict = None) -> str:
         """
         Get a system prompt based on the variation number.
         
         Args:
             variation: Prompt variation number (1, 2, 3, etc.)
             search_provider_name: Name of the search provider being used
+            foundation_data: Optional dictionary containing foundation information:
+                - foundation_name: Foundation Name
+                - ein: EIN number
+                - foundation_contact: Foundation Contact
+                - foundation_address: Foundation Address
+                - foundation_city: Foundation City
+                - foundation_website_text: Foundation Website Address Text
             
         Returns:
             str: The system prompt text
         """
         prompts = {
-            1: PromptProvider._get_prompt_v1(search_provider_name),
-            2: PromptProvider._get_prompt_v2(search_provider_name),
-            3: PromptProvider._get_prompt_v3(search_provider_name),
-            4: PromptProvider._get_prompt_v4(search_provider_name),
+            1: PromptProvider._get_prompt_v1(search_provider_name, foundation_data),
+            2: PromptProvider._get_prompt_v2(search_provider_name, foundation_data),
+            3: PromptProvider._get_prompt_v3(search_provider_name, foundation_data),
+            4: PromptProvider._get_prompt_v4(search_provider_name, foundation_data),
         }
         
         if variation not in prompts:
@@ -31,17 +38,65 @@ class PromptProvider:
         return prompts[variation]
     
     @staticmethod
-    def _get_prompt_v1(search_provider_name: str) -> str:
+    def _build_foundation_info_section(foundation_data: dict) -> str:
+        """
+        Build the foundation information section for prompts.
+        Only includes non-blank data fields.
+        
+        Args:
+            foundation_data: Dictionary containing foundation information
+            
+        Returns:
+            str: Formatted foundation information section
+        """
+        if not foundation_data:
+            return ""
+        
+        info_lines = []
+        
+        # Check each field and add only if not blank
+        if foundation_data.get('foundation_name') and foundation_data['foundation_name'].strip():
+            info_lines.append(f"- Foundation Name: {foundation_data['foundation_name'].strip()}")
+        
+        if foundation_data.get('ein') and foundation_data['ein'].strip():
+            info_lines.append(f"- EIN: {foundation_data['ein'].strip()}")
+        
+        if foundation_data.get('foundation_contact') and foundation_data['foundation_contact'].strip():
+            info_lines.append(f"- Contact: {foundation_data['foundation_contact'].strip()}")
+        
+        if foundation_data.get('foundation_address') and foundation_data['foundation_address'].strip():
+            info_lines.append(f"- Address: {foundation_data['foundation_address'].strip()}")
+        
+        if foundation_data.get('foundation_city') and foundation_data['foundation_city'].strip():
+            info_lines.append(f"- City: {foundation_data['foundation_city'].strip()}")
+        
+        if foundation_data.get('foundation_website_text') and foundation_data['foundation_website_text'].strip():
+            info_lines.append(f"- Known Website Info: {foundation_data['foundation_website_text'].strip()}")
+        
+        if info_lines:
+            return f"""
+AVAILABLE FOUNDATION DATA:
+{chr(10).join(info_lines)}
+
+Use this information to help validate and confirm the correct foundation website.
+"""
+        return ""
+    
+    @staticmethod
+    def _get_prompt_v1(search_provider_name: str, foundation_data: dict = None) -> str:
         """Original prompt - Current working version."""
+        foundation_info = PromptProvider._build_foundation_info_section(foundation_data)
+        
         return f"""
 You are a grant assistant that finds official foundation websites using {search_provider_name}. Given an organization name, you must:
-
+{foundation_info}
 SEARCH STRATEGY (try multiple approaches):
-1. Start with search: "[Foundation Name] official website"
-2. If no clear result, try: "[Foundation Name] .org"
-3. If still unclear, try: "[Foundation Name] foundation grants"
-4. If needed, try variations of the name (e.g., with/without "The", abbreviations)
-5. Try searching for "[Foundation Name] homepage" or "[Foundation Name] main site"
+1. Start with search: "[Foundation Name] foundation/organization"
+2. If no clear result, try: "[Foundation Name] official website"
+3. If still unclear, try: "[Foundation Name] .org"
+4. If still unclear, try: "[Foundation Name] foundation grants"
+5. If needed, try variations of the name (e.g., with/without "The", abbreviations)
+6. Try searching for "[Foundation Name] homepage" or "[Foundation Name] main site"
 
 ANALYSIS CRITERIA:
 - Look for URLs that end with .org, .com, or similar domains
@@ -54,11 +109,13 @@ Focus on finding the main official website, not news articles or other pages abo
 """
 
     @staticmethod
-    def _get_prompt_v2(search_provider_name: str) -> str:
+    def _get_prompt_v2(search_provider_name: str, foundation_data: dict = None) -> str:
         """Enhanced prompt with more specific instructions."""
+        foundation_info = PromptProvider._build_foundation_info_section(foundation_data)
+        
         return f"""
 You are an expert foundation research assistant using {search_provider_name} to find official foundation websites.
-
+{foundation_info}
 MISSION: Find the PRIMARY official website URL for the given organization.
 
 SEARCH METHODOLOGY:
@@ -83,11 +140,13 @@ OUTPUT FORMAT: Return ONLY the verified URL, no explanations or additional text.
 """
 
     @staticmethod
-    def _get_prompt_v3(search_provider_name: str) -> str:
+    def _get_prompt_v3(search_provider_name: str, foundation_data: dict = None) -> str:
         """Concise and focused prompt."""
+        foundation_info = PromptProvider._build_foundation_info_section(foundation_data)
+        
         return f"""
 Foundation URL Finder using {search_provider_name}.
-
+{foundation_info}
 TASK: Find the official website URL for the given foundation/organization.
 
 SEARCH STEPS:
@@ -106,11 +165,13 @@ OUTPUT: URL only, nothing else.
 """
 
     @staticmethod
-    def _get_prompt_v4(search_provider_name: str) -> str:
-        """Detailed prompt with step-by-step reasoning."""
+    def _get_prompt_v4(search_provider_name: str, foundation_data: dict = None) -> str:
+        """Detailed prompt with step-by-step reasoning and database integration."""
+        foundation_info = PromptProvider._build_foundation_info_section(foundation_data)
+        
         return f"""
 You are a professional foundation research specialist using {search_provider_name} to locate official foundation websites.
-
+{foundation_info}
 OBJECTIVE: Identify and return the primary official website URL for the specified foundation or organization.
 
 SYSTEMATIC SEARCH APPROACH:
@@ -131,17 +192,25 @@ Phase 4 - Name Variations (if needed):
 - Try common abbreviations
 - Try full vs. shortened names
 
+Phase 5 - Geographic and Contact Verification (if data available):
+- Use city/address information to verify location-specific results
+- Cross-reference with known contact information
+- Validate against EIN if provided
+
 QUALITY ASSURANCE:
 1. URL must be the primary domain (not subpages)
 2. Must validate using the validate_url tool
 3. Content must contain foundation/grant-related terms
 4. Avoid third-party sites, news articles, or directories
+5. Cross-reference with available foundation data for accuracy
 
 DECISION CRITERIA:
 - Official domain ownership by the organization
 - Professional website design and content
 - Clear foundation mission and programs
 - Contact information present
+- Geographic consistency with known data
+- EIN verification if possible
 
 FINAL OUTPUT: Provide ONLY the verified primary website URL.
 """

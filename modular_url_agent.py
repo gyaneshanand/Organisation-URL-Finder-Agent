@@ -84,7 +84,8 @@ class ModularURLAgent:
                  config: SearchConfig = None,
                  llm_model: str = "gpt-4",
                  llm_temperature: float = 0.1,
-                 prompt_variation: int = 1):
+                 prompt_variation: int = 1,
+                 foundation_data: dict = None):
         """
         Initialize the modular URL agent.
         
@@ -94,10 +95,14 @@ class ModularURLAgent:
             llm_model: OpenAI model to use
             llm_temperature: Temperature for the LLM
             prompt_variation: Which prompt variation to use (1, 2, 3, etc.)
+            foundation_data: Optional foundation data dict with keys:
+                - foundation_name, ein, foundation_contact, foundation_address,
+                - foundation_city, foundation_website_text
         """
         self.config = config or SearchConfig.from_env()
         self.llm = ChatOpenAI(temperature=llm_temperature, model=llm_model)
         self.prompt_variation = prompt_variation
+        self.foundation_data = foundation_data
         
         # Set up search provider
         if search_provider:
@@ -123,7 +128,8 @@ class ModularURLAgent:
         # Get the system prompt from PromptProvider
         system_prompt = PromptProvider.get_prompt(
             variation=self.prompt_variation,
-            search_provider_name=self.search_provider.get_provider_name()
+            search_provider_name=self.search_provider.get_provider_name(),
+            foundation_data=self.foundation_data
         )
         
         prompt = ChatPromptTemplate.from_messages([
@@ -173,6 +179,17 @@ class ModularURLAgent:
         self._setup_agent()
         print(f"🔄 Switched from prompt variation {old_variation} to {variation}")
         print(f"📝 Variation {variation}: {PromptProvider.get_variation_description(variation)}")
+    
+    def update_foundation_data(self, foundation_data: dict):
+        """
+        Update foundation data and refresh the agent.
+        
+        Args:
+            foundation_data: Dictionary containing foundation information
+        """
+        self.foundation_data = foundation_data
+        self._setup_agent()
+        print(f"📊 Foundation data updated and agent refreshed")
     
     def get_current_prompt_info(self) -> dict:
         """Get information about the current prompt variation."""
