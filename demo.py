@@ -10,7 +10,7 @@ def main():
     print("🚀 Modular URL Agent Demo")
     print("=" * 50)
     
-    # Example foundation to search for
+    # Example foundation\ to search for
     foundation_name = "The William Penn Foundation"
     
     # Method 1: Use default configuration (auto-selects best available provider)

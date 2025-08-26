@@ -13,6 +13,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from search_providers import SearchProviderFactory
 from config import SearchConfig
+from prompt_provider import PromptProvider
 
 # Load environment
 load_dotenv()
@@ -82,7 +83,8 @@ class ModularURLAgent:
                  search_provider: str = None,
                  config: SearchConfig = None,
                  llm_model: str = "gpt-4",
-                 llm_temperature: float = 0.1):
+                 llm_temperature: float = 0.1,
+                 prompt_variation: int = 1):
         """
         Initialize the modular URL agent.
         
@@ -91,9 +93,11 @@ class ModularURLAgent:
             config: SearchConfig instance, will create default if None
             llm_model: OpenAI model to use
             llm_temperature: Temperature for the LLM
+            prompt_variation: Which prompt variation to use (1, 2, 3, etc.)
         """
         self.config = config or SearchConfig.from_env()
         self.llm = ChatOpenAI(temperature=llm_temperature, model=llm_model)
+        self.prompt_variation = prompt_variation
         
         # Set up search provider
         if search_provider:
@@ -116,25 +120,11 @@ class ModularURLAgent:
     
     def _setup_agent(self):
         """Set up the LangChain agent with the search tools."""
-        system_prompt = f"""
-You are a grant assistant that finds official foundation websites using {self.search_provider.get_provider_name()}. Given an organization name, you must:
-
-SEARCH STRATEGY (try multiple approaches):
-1. Start with search: "[Foundation Name] official website"
-2. If no clear result, try: "[Foundation Name] .org"
-3. If still unclear, try: "[Foundation Name] foundation grants"
-4. If needed, try variations of the name (e.g., with/without "The", abbreviations)
-5. Try searching for "[Foundation Name] homepage" or "[Foundation Name] main site"
-
-ANALYSIS CRITERIA:
-- Look for URLs that end with .org, .com, or similar domains
-- Prioritize results that clearly match the foundation name
-- Use the validate_url tool to check if URLs contain foundation/grant content
-
-OUTPUT: Return ONLY the most reliable URL you find, nothing else.
-
-Focus on finding the main official website, not news articles or other pages about the foundation.
-"""
+        # Get the system prompt from PromptProvider
+        system_prompt = PromptProvider.get_prompt(
+            variation=self.prompt_variation,
+            search_provider_name=self.search_provider.get_provider_name()
+        )
         
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
@@ -170,6 +160,31 @@ Focus on finding the main official website, not news articles or other pages abo
         self._setup_agent()
         
         print(f"✅ Now using {self.search_provider.get_provider_name()}")
+    
+    def switch_prompt_variation(self, variation: int):
+        """
+        Switch to a different prompt variation.
+        
+        Args:
+            variation: Prompt variation number
+        """
+        old_variation = self.prompt_variation
+        self.prompt_variation = variation
+        self._setup_agent()
+        print(f"🔄 Switched from prompt variation {old_variation} to {variation}")
+        print(f"📝 Variation {variation}: {PromptProvider.get_variation_description(variation)}")
+    
+    def get_current_prompt_info(self) -> dict:
+        """Get information about the current prompt variation."""
+        return {
+            "variation": self.prompt_variation,
+            "description": PromptProvider.get_variation_description(self.prompt_variation),
+            "search_provider": self.search_provider.get_provider_name()
+        }
+    
+    def list_prompt_variations(self):
+        """List all available prompt variations."""
+        PromptProvider.list_all_variations()
     
     def find_foundation_url(self, name: str) -> str:
         """
@@ -220,24 +235,39 @@ Focus on finding the main official website, not news articles or other pages abo
 
 
 def main():
-    """Example usage of the modular URL agent."""
+    """Example usage of the modular URL agent with prompt variations."""
     
-    # Create agent with default provider
-    agent = ModularURLAgent()
+    # Create agent with default provider and prompt variation
+    agent = ModularURLAgent(prompt_variation=1)
     
     print(f"Available providers: {agent.get_available_providers()}")
     print(f"Current provider: {agent.get_current_provider()}")
     
-    # Search for a foundation
+    # Show current prompt info
+    print(f"Current prompt info: {agent.get_current_prompt_info()}")
+    
+    # List all available prompt variations
+    print("\n" + "="*50)
+    agent.list_prompt_variations()
+    print("="*50 + "\n")
+    
+    # Search for a foundation with default prompt
     foundation_name = "The William Penn Foundation"
+    print(f"🔍 Testing with prompt variation 1:")
     url = agent.find_foundation_url(foundation_name)
     print(f"✅ Result: {url}")
+    
+    # Example: Switch to a different prompt variation
+    print(f"\n🔄 Switching to prompt variation 2...")
+    agent.switch_prompt_variation(2)
+    url2 = agent.find_foundation_url(foundation_name)
+    print(f"✅ Result with variation 2: {url2}")
     
     # Example: Switch to a different provider (if available)
     try:
         agent.switch_search_provider("tavily")
-        url2 = agent.find_foundation_url(foundation_name)
-        print(f"✅ Result with Tavily: {url2}")
+        url3 = agent.find_foundation_url(foundation_name)
+        print(f"✅ Result with Tavily: {url3}")
     except Exception as e:
         print(f"Could not switch to Tavily: {e}")
 

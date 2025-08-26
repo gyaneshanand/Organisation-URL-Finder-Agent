@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize the modular agent
 try:
-    url_agent = ModularURLAgent()
+    url_agent = ModularURLAgent(prompt_variation=1)
     logger.info(f"Initialized with search provider: {url_agent.get_current_provider()}")
 except Exception as e:
     logger.error(f"Failed to initialize URL agent: {e}")
