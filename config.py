@@ -40,10 +40,10 @@ class SearchConfig:
         
         if self.search_variations is None:
             self.search_variations = [
-                "'{name}' official website",
-                "'{name}' .org domain",
-                "'{name}' foundation grants homepage",
-                "'{name}' organization website"
+                # "'{name}' official website",
+                # "'{name}' .org domain",
+                # "'{name}' foundation grants homepage",
+                # "'{name}' organization website"
             ]
         
         # Load API keys from environment if not provided

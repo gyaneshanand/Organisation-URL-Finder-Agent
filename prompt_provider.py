@@ -71,7 +71,7 @@ class PromptProvider:
             info_lines.append(f"- City: {foundation_data['foundation_city'].strip()}")
         
         if foundation_data.get('foundation_website_text') and foundation_data['foundation_website_text'].strip():
-            info_lines.append(f"- Known Website Info: {foundation_data['foundation_website_text'].strip()}")
+            info_lines.append(f"- Known Website URL Info: {foundation_data['foundation_website_text'].strip()}")
         
         if info_lines:
             return f"""
@@ -88,20 +88,26 @@ Use this information to help validate and confirm the correct foundation website
         foundation_info = PromptProvider._build_foundation_info_section(foundation_data)
         
         return f"""
-You are a grant assistant that finds official foundation websites using {search_provider_name}. Given an organization name, you must:
+You are a grant assistant that finds official foundation websites using {search_provider_name}. 
+
+AVAILABLE TOOLS:
+- duckduckgo_results_json: Search for information using DuckDuckGo
+- validate_url: Check if a URL contains foundation/grant content (call as 'validate_url', NOT 'functions.validate_url')
+
+Given an organization name, you must:
 {foundation_info}
 SEARCH STRATEGY (try multiple approaches):
-1. Start with search: "[Foundation Name] foundation/organization"
-2. If no clear result, try: "[Foundation Name] official website"
-3. If still unclear, try: "[Foundation Name] .org"
-4. If still unclear, try: "[Foundation Name] foundation grants"
+1. Start with search: "[Foundation Name] foundation official website"
+2. If no clear result, try: "[Foundation Name] foundation .org"
+3. If still unclear, try: "[Foundation Name] grants foundation homepage"
+4. If still unclear, try: "[Foundation Name] charity foundation website"
 5. If needed, try variations of the name (e.g., with/without "The", abbreviations)
-6. Try searching for "[Foundation Name] homepage" or "[Foundation Name] main site"
+6. Try searching for "[Foundation Name] foundation grants homepage"
 
 ANALYSIS CRITERIA:
 - Look for URLs that end with .org, .com, or similar domains
 - Prioritize results that clearly match the foundation name
-- Use the validate_url tool to check if URLs contain foundation/grant content
+- Use validate_url tool (NOT functions.validate_url) to check if URLs contain foundation/grant content
 
 OUTPUT: Return ONLY the most reliable URL you find, nothing else.
 
@@ -115,25 +121,36 @@ Focus on finding the main official website, not news articles or other pages abo
         
         return f"""
 You are an expert foundation research assistant using {search_provider_name} to find official foundation websites.
+
+AVAILABLE TOOLS:
+- duckduckgo_results_json: Search for information using DuckDuckGo  
+- validate_url: Check if a URL contains foundation/grant content (call as 'validate_url', NOT 'functions.validate_url')
+
 {foundation_info}
 MISSION: Find the PRIMARY official website URL for the given organization.
 
 SEARCH METHODOLOGY:
-1. PRIMARY: "[Organization Name] official website"
-2. SECONDARY: "[Organization Name] foundation .org"
-3. TERTIARY: "[Organization Name] grants homepage"
-4. ALTERNATIVE: Try name variations (remove "The", use acronyms, etc.)
-5. VERIFICATION: "[Organization Name] contact information"
+1. Start the search with "[Foundation Name] foundation official website with the [foundation_data]" 
+2. Then with search: "[Foundation Name] foundation .org"
+3. If no clear result, try: "[Foundation Name] grants foundation homepage"
+4. If still unclear, try: "[Foundation Name] charity foundation website"
+5. If still unclear, try: "[Foundation Name] foundation grants"
+6. Try searching for "[Foundation Name] foundation homepage" or "[Foundation Name] foundation main site"
+
+ANALYSIS CRITERIA:
+- Look for URLs that end with .org, .com, or similar domains
+- Prioritize results that clearly match the foundation name
+- Use validate_url tool (NOT functions.validate_url) to check if URLs contain foundation/grant content
+- Avoid directory listing websites like foundationcenter.org, guidestar.org, charitynavigator.org, and similar sites. They are not official foundation websites.
 
 VALIDATION REQUIREMENTS:
-- Must be the organization's primary domain (not subdirectories)
+- Preferably Must be the organization's primary domain (not subdirectories)
 - Prefer .org domains for foundations
 - Avoid news articles, Wikipedia, or third-party sites
-- Use validate_url tool to confirm foundation/grant content exists
+- Use validate_url tool (NOT functions.validate_url) to confirm foundation/grant content exists
 
 SUCCESS CRITERIA:
 - URL loads successfully
-- Contains foundation or grant-related content
 - Matches the organization name clearly
 
 OUTPUT FORMAT: Return ONLY the verified URL, no explanations or additional text.
@@ -146,19 +163,24 @@ OUTPUT FORMAT: Return ONLY the verified URL, no explanations or additional text.
         
         return f"""
 Foundation URL Finder using {search_provider_name}.
+
+AVAILABLE TOOLS:
+- duckduckgo_results_json: Search for information using DuckDuckGo
+- validate_url: Check if a URL contains foundation/grant content (call as 'validate_url', NOT 'functions.validate_url')
+
 {foundation_info}
 TASK: Find the official website URL for the given foundation/organization.
 
 SEARCH STEPS:
-1. "[Name] official website"
-2. "[Name] .org site"
-3. "[Name] foundation homepage"
+1. "[Name] foundation official website"
+2. "[Name] foundation .org site"  
+3. "[Name] grants foundation homepage"
 4. Try name variants if needed
 
 RULES:
 - Return ONLY the main website URL
 - Prefer .org domains
-- Validate URLs contain "foundation" or "grant" content
+- Use validate_url tool to check URLs contain "foundation" or "grant" content
 - Avoid news/Wikipedia links
 
 OUTPUT: URL only, nothing else.
@@ -199,7 +221,7 @@ Phase 5 - Geographic and Contact Verification (if data available):
 
 QUALITY ASSURANCE:
 1. URL must be the primary domain (not subpages)
-2. Must validate using the validate_url tool
+2. Must validate using validate_url tool (NOT functions.validate_url)
 3. Content must contain foundation/grant-related terms
 4. Avoid third-party sites, news articles, or directories
 5. Cross-reference with available foundation data for accuracy

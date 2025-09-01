@@ -71,7 +71,7 @@ def url_validator(url: str) -> str:
 # Create URL validation tool
 validate_url_tool = Tool(
     name="validate_url",
-    description="Fetches the URL and returns text if 'grant' or 'foundation' is found.",
+    description="Call this as 'validate_url' (NOT functions.validate_url). Fetches the URL and returns text if 'grant' or 'foundation' is found in the content.",
     func=url_validator
 )
 
@@ -84,7 +84,7 @@ class ModularURLAgent:
                  config: SearchConfig = None,
                  llm_model: str = "gpt-4",
                  llm_temperature: float = 0.1,
-                 prompt_variation: int = 1,
+                 prompt_variation: int = 2,
                  foundation_data: dict = None):
         """
         Initialize the modular URL agent.
