@@ -228,6 +228,9 @@ class ModularURLAgent:
         for i, prompt_text in enumerate(search_variations):
             try:
                 print(f"🔍 Attempt {i+1}: {prompt_text}")
+                # Print the system and user prompts
+                print(f"🛠️ System Prompt: {PromptProvider.get_prompt(variation=self.prompt_variation, search_provider_name=self.search_provider.get_provider_name(), foundation_data=self.foundation_data)}")
+                print(f"👤 User Prompt: {prompt_text}")
                 response = self.agent_executor.invoke({"input": prompt_text})
                 result = response["output"].strip()
                 

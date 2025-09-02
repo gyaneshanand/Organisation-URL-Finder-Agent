@@ -28,8 +28,8 @@ class TavilyProvider(BaseSearchProvider):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.api_key = kwargs.get('api_key') or os.getenv('TAVILY_API_KEY')
-        self.max_results = kwargs.get('max_results', 15)
-        self.search_depth = kwargs.get('search_depth', 'advanced')  # 'basic' or 'advanced'
+        self.max_results = kwargs.get('max_results', 10)
+        self.search_depth = kwargs.get('search_depth', 'basic')  # 'basic' or 'advanced'
     
     def get_search_tool(self) -> BaseTool:
         """Return the Tavily search tool."""
